@@ -53,10 +53,10 @@ kbdled +c
 
 Disable the Caps Lock LED:
 ```bash
-kbdled +c
+kbdled -c
 ```
 
-Enable all LEDs not matter their state:
+Enable all LEDs not matter their previous state:
 ```bash
 kbdled +c+n+s
 ```
