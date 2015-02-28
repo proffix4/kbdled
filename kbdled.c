@@ -34,29 +34,30 @@
 #include <unistd.h>
 
 int
-main(int argc, char **argv) {
-    if (argc < 2) {
-        fprintf(stderr, "usage: kbdled [cnsr]\n");
-        return EXIT_FAILURE;
-    }
+led_on(int val, int led) {
+    return val | led;
+}
 
-    int tty = open("/dev/tty", O_RDONLY);
-    if (tty == -1) {
-        perror("open");
-        return EXIT_FAILURE;
-    }
+int
+led_off(int val, int led) {
+    return (val | led) ^ led;
+}
 
-    int state = 0;
-    if (ioctl(tty, KDGETLED, &state) == -1) {
-        perror("ioctl");
-        return EXIT_FAILURE;
-    }
+int
+led_toggle(int val, int led) {
+    return val & led ? led_off(val, led) : led_on(val, led);
+}
 
+int
+parse_seq(char *s, int state) {
     int val = state;
-    char *s = argv[1];
-    for(char c = *s; c != 0; c = *++s) {
+    int (*f)(int, int) = led_toggle;
+
+    for(char op = *s; op != 0; op = *++s) {
         int led = 0;
-        switch(c) {
+        int skip = 0;
+
+        switch(op) {
         case 'c':
             led = LED_CAP;
             break;
@@ -69,13 +70,58 @@ main(int argc, char **argv) {
         case 'r': /* reset */
             val = 0;
             break;
+        case '+':
+            f = led_on;
+            skip = 1;
+            break;
+        case '-':
+            f = led_off;
+            skip = 1;
+            break;
         default:
+            fprintf(stderr, "unknown op: %c\n", op);
             break;
         }
 
-        /* toggle led */
-        val = val & led ? val ^ led : val | led;
+        if(!skip) {
+            val = f(val, led);
+            f = led_toggle;
+        }
     }
+
+    return val;
+}
+
+int
+main(int argc, char **argv) {
+    char *seq;
+    char *dev;
+    if (argc == 2) {
+        seq = argv[1];
+        dev = "/dev/tty";
+    } else if (argc == 3) {
+        dev = argv[1];
+        seq = argv[2];
+    } else {
+        fprintf(stderr,
+                "usage: kbdled [cnsr]\n"
+                "       kbdled tty [cnsr]\n");
+        return EXIT_FAILURE;
+    }
+
+    int tty = open(dev, O_RDONLY);
+    if (tty == -1) {
+        perror("open");
+        return EXIT_FAILURE;
+    }
+
+    int state = 0;
+    if (ioctl(tty, KDGETLED, &state) == -1) {
+        perror("ioctl");
+        return EXIT_FAILURE;
+    }
+
+    int val = parse_seq(seq, state);
 
     if (ioctl(tty, KDSETLED, val) == -1) {
         perror("ioctl");

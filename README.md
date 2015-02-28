@@ -12,38 +12,58 @@ make install
 
 ## Usage
 
-Find out what tty your on and substitute `/dev/ttyv2` with your current tty.
+```
+usage: kbdled [cnsr]
+       kbdled tty [cnsr]
+```
 
 Toggle your Caps Lock LED:
 ```bash
-kbdled /dev/ttyv2 c
+kbdled c
 ```
 
-Num Lock LED:
+Toggle Num Lock LED:
 ```bash
-kbdled /dev/ttyv2 n
+kbdled n
 ```
 
-Scroll Lock LED:
+Toggle Scroll Lock LED:
 ```bash
-kbdled /dev/ttyv2 s
+kbdled s
 ```
 
 Reset all LEDs to off:
 ```bash
-kbdled /dev/ttyv2 r
+kbdled r
 ```
 
 You can combine options to toggle multiple LEDs.
 
 Toggle all LEDs:
 ```bash
-kbdled /dev/ttyv2 cns
+kbdled cns
+```
+
+Prefix an LED with `+` to enable it and with `-` to disable it.
+
+Enable the Caps Lock LED:
+```bash
+kbdled +c
+```
+
+Disable the Caps Lock LED:
+```bash
+kbdled +c
 ```
 
 Enable all LEDs not matter their state:
 ```bash
-kbdled /dev/ttyv2 rcns
+kbdled +c+n+s
+```
+
+You can specify a tty like this:
+```bash
+kbdled /dev/ttyv8 +cns
 ```
 
 ## License
