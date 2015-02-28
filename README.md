@@ -13,8 +13,8 @@ make install
 ## Usage
 
 ```
-usage: kbdled [cnsr]
-       kbdled tty [cnsr]
+usage: kbdled [+-][cnsr]
+       kbdled tty [+-][cnsr]
 ```
 
 Toggle your Caps Lock LED:

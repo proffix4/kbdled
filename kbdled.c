@@ -104,8 +104,8 @@ main(int argc, char **argv) {
         seq = argv[2];
     } else {
         fprintf(stderr,
-                "usage: kbdled [cnsr]\n"
-                "       kbdled tty [cnsr]\n");
+                "usage: kbdled [+-][cnsr]\n"
+                "       kbdled tty [+-][cnsr]\n");
         return EXIT_FAILURE;
     }
 
