@@ -35,12 +35,12 @@
 
 int
 main(int argc, char **argv) {
-    if(argc < 3) {
-        fprintf(stderr, "usage: kbdled tty [cnsr]\n");
+    if (argc < 2) {
+        fprintf(stderr, "usage: kbdled [cnsr]\n");
         return EXIT_FAILURE;
     }
 
-    int tty = open(argv[1], O_RDONLY);
+    int tty = open("/dev/tty", O_RDONLY);
     if (tty == -1) {
         perror("open");
         return EXIT_FAILURE;
@@ -53,7 +53,7 @@ main(int argc, char **argv) {
     }
 
     int val = state;
-    char *s = argv[2];
+    char *s = argv[1];
     for(char c = *s; c != 0; c = *++s) {
         int led = 0;
         switch(c) {
