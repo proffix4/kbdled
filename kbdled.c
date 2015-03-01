@@ -26,31 +26,36 @@
  *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  *   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+#include <err.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/ioctl.h>
 #include <sys/kbio.h>
+#include <sysexits.h>
 #include <unistd.h>
 
+int initial_led_state = 0;
+
 int
-led_on(int val, int led) {
-    return val | led;
+led_on(int state, int led) {
+    return state | led;
 }
 
 int
-led_off(int val, int led) {
-    return (val | led) ^ led;
+led_off(int state, int led) {
+    return (state | led) ^ led;
 }
 
 int
-led_toggle(int val, int led) {
-    return val & led ? led_off(val, led) : led_on(val, led);
+led_toggle(int state, int led) {
+    return state & led ? led_off(state, led) : led_on(state, led);
 }
 
 int
 parse_seq(char *s, int state) {
-    int val = state;
     int (*f)(int, int) = led_toggle;
 
     for(char op = *s; op != 0; op = *++s) {
@@ -68,7 +73,7 @@ parse_seq(char *s, int state) {
             led = LED_SCR;
             break;
         case 'r': /* reset */
-            val = 0;
+            state = 0;
             break;
         case '+':
             f = led_on;
@@ -79,53 +84,82 @@ parse_seq(char *s, int state) {
             skip = 1;
             break;
         default:
-            fprintf(stderr, "unknown op: %c\n", op);
+            warnx("unknown op: %c", op);
             break;
         }
 
         if(!skip) {
-            val = f(val, led);
+            state = f(state, led);
             f = led_toggle;
         }
     }
 
-    return val;
+    return state;
+}
+
+int
+led_state(int fd) {
+    int state = 0;
+    int status = ioctl(fd, KDGETLED, &state);
+    if (status == -1)
+        err(EX_IOERR, "cannot get led state");
+    return state;
+}
+
+void
+set_led_state(int fd, int state) {
+    int status = ioctl(fd, KDSETLED, state);
+    if (status == -1)
+        err(EX_IOERR, "cannot set led state");
 }
 
 int
 main(int argc, char **argv) {
     char *seq;
-    char *dev;
-    if (argc == 2) {
-        seq = argv[1];
-        dev = "/dev/tty";
-    } else if (argc == 3) {
-        dev = argv[1];
-        seq = argv[2];
+    char *dev = "/dev/tty";
+    if (argc >= 3) {
+        if (strcmp(argv[1], "-t") == 0) {
+            argv++;
+            dev = *++argv;
+        }
+        seq = *++argv;
     } else {
         fprintf(stderr,
                 "usage: kbdled [+-][cnsr]\n"
-                "       kbdled tty [+-][cnsr]\n");
+                "       kbdled -t tty [+-][cnsr]\n");
         return EXIT_FAILURE;
     }
 
     int tty = open(dev, O_RDONLY);
-    if (tty == -1) {
-        perror("open");
-        return EXIT_FAILURE;
-    }
+    if (tty == -1)
+        errc(EX_IOERR, errno, "opening tty failed");
 
-    int state = 0;
-    if (ioctl(tty, KDGETLED, &state) == -1) {
-        perror("ioctl");
-        return EXIT_FAILURE;
-    }
+    int state = led_state(tty);
+    initial_led_state = state;
 
-    int val = parse_seq(seq, state);
+    char **init_argv = argv;
+    for (char *seq = *argv; *argv; seq = *++argv) {
+        if (strcmp(seq, "loop") == 0) {
+            argv = init_argv;
+            seq = *argv;
+        } else if (*seq == 'w') {
+            seq++;
+            long s = strtol(seq, NULL, 10);
 
-    if (ioctl(tty, KDSETLED, val) == -1) {
-        perror("ioctl");
-        return EXIT_FAILURE;
+            if(errno == EINVAL || errno == ERANGE)
+                err(EX_DATAERR, "'%s' not a number", seq);
+
+            if(s < 0) {
+                errx(EX_DATAERR, "'%s' is not a positive number", seq);
+            }
+
+            if(usleep(s * 1000) == -1)
+                err(EX_OSERR, "usleep failed");
+
+            continue;
+        }
+
+        set_led_state(tty, parse_seq(seq, state));
     }
 
     close(tty);

@@ -14,7 +14,7 @@ make install
 
 ```
 usage: kbdled [+-][cnsr]
-       kbdled tty [+-][cnsr]
+       kbdled -t tty [+-][cnsr]
 ```
 
 Toggle your Caps Lock LED:
@@ -63,7 +63,23 @@ kbdled +c+n+s
 
 You can specify a tty like this:
 ```bash
-kbdled /dev/ttyv8 +cns
+kbdled -t /dev/ttyv8 +cns
+```
+
+There is some simple support for animating your LEDs.
+The following example enables your Caps Lock LED, waits 250 ms and then disables it again.
+```bash
+kblded +c w250 -c
+```
+
+You can loop with `loop`. This makes your Caps Lock LED blink forever:
+```bash
+kbdled +c w250 -c w250 loop
+```
+
+To make all LEDs "bounce" back and forth:
+```bash
+kbdled r+n w250 -n+c w250 -c+s w250 -s+c w250 -c+n w250 loop
 ```
 
 ## License
