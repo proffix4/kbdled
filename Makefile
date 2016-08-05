@@ -1,9 +1,11 @@
-all: kbdled
+PREFIX?=	/usr/local
+BINDIR?=	${PREFIX}/bin
 
-clean:
-	@rm -f kbdled
+CFLAGS+=	-Wall -Weverything
 
-install: all
-	@install kbdled /usr/local/bin
+PROG=	kbdled
+SRCS=	kbdled.c
 
-.PHONY: all clean install
+MAN=
+
+.include <bsd.prog.mk>
